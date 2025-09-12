@@ -1,0 +1,551 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta
+      name="viewport"
+      content="width=device-width, initial-scale=1, maximum-scale=1"
+    />
+    <title>Zashi Demo Mockup</title>
+    <link rel="stylesheet" href="styles.css" />
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link
+      href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap"
+      rel="stylesheet"
+    />
+  </head>
+  <body>
+    <div id="app">
+      <!-- Topbar -->
+      <header class="topbar">
+        <div class="brand" title="Go Home">
+          <div class="logo">ᙇ</div>
+          <div class="brand-name">ZSAs(hi) Demo</div>
+          <button class="network-pill" id="networkBtn">▾</button>
+        </div>
+        <div class="top-actions">
+          <button class="icon-btn" id="privacyToggle" title="Toggle Privacy">
+            👁
+          </button>
+          <button class="icon-btn" id="settingsBtn" title="Settings">⚙️</button>
+        </div>
+      </header>
+
+      <!-- Router Views -->
+      <main id="viewContainer"></main>
+    </div>
+
+    <!-- Toast -->
+    <div id="toast"></div>
+
+    <!-- Simple modal -->
+    <div id="modalBackdrop" class="hidden">
+      <div id="modal">
+        <div id="modalTitle"></div>
+        <div id="modalBody"></div>
+        <div class="modal-actions">
+          <button id="modalCancel">Cancel</button>
+          <button id="modalOK" class="primary">OK</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- Templates (rendered by JS) -->
+    <template id="tpl-dashboard">
+      <section class="balance-card">
+        <div class="balance-row">
+          <div class="balance" data-priv="zec-balance">0</div>
+        </div>
+        <div class="fiat-row">
+          <div class="fiat" data-priv="usd-balance">US$0,00</div>
+          <button class="icon-btn" id="refreshRates" title="Refresh">↻</button>
+        </div>
+      </section>
+
+      <section class="action-row">
+        <button class="action-tile" data-nav="receive">
+          ⤵
+          <span>Receive</span>
+        </button>
+        <button class="action-tile" data-nav="send">
+          ⤴
+          <span>Send</span>
+        </button>
+        <button class="action-tile" data-nav="pay">
+          ➜
+          <span>Pay</span>
+        </button>
+        <button class="action-tile" data-nav="more">
+          ⋯
+          <span>More</span>
+        </button>
+      </section>
+
+      <section class="list-header">
+        <h2>Portfolio</h2>
+        <button class="trade-btn" data-nav="dex">Trade ▸</button>
+      </section>
+      <section class="asset-grid" id="assetGrid"></section>
+      
+      <section class="list-header">
+        <h2>Transactions</h2>
+        <button class="see-all" data-nav="transactions">See all ▸</button>
+      </section>
+      <section id="txList" class="tx-list"></section>
+    </template>
+
+    <template id="tpl-send">
+      <section class="screen-header">
+        <button class="back" data-nav="back">←</button>
+        <h1>SEND</h1>
+        <button class="icon-btn">👁</button>
+      </section>
+
+      <div class="large-balance" data-priv="zec-balance-large">⌁0,000000</div>
+
+      <div class="field">
+        <label>Send to</label>
+        <div class="input-with-icons">
+          <input id="sendAddress" placeholder="Zcash Address" />
+          <div class="input-icons">
+            <button id="pickContact">👤</button>
+            <button id="scanQr">▦</button>
+          </div>
+        </div>
+      </div>
+
+      <div class="grid-2">
+        <div class="field">
+          <label>Amount (ZEC)</label>
+          <input id="amountZec" type="number" step="0.00000001" />
+        </div>
+        <div class="field">
+          <label>≈ USD</label>
+          <input id="amountUsd" type="number" step="0.01" />
+        </div>
+      </div>
+
+      <div class="field">
+        <label>Message</label>
+        <textarea id="sendMemo" maxlength="512" placeholder="Encrypted memo"></textarea>
+        <div class="hint">512/512</div>
+      </div>
+
+      <button class="primary block" id="reviewSend">Review</button>
+    </template>
+
+    <template id="tpl-receive">
+      <section class="screen-header">
+        <button class="back" data-nav="back">←</button>
+        <h1>RECEIVE ZEC</h1>
+        <div></div>
+      </section>
+
+      <div class="card purple">
+        <div class="card-title">Zcash Shielded Address</div>
+        <div class="card-sub">Rotates every time you use it</div>
+        <div class="button-row">
+          <button id="copyShielded" class="secondary">Copy</button>
+          <button id="qrShielded" class="secondary">QR Code</button>
+          <button id="reqShielded" class="secondary">Request</button>
+        </div>
+      </div>
+
+      <div class="card">
+        <div class="card-title">Zcash Transparent Address</div>
+        <div class="card-mono" id="taddr"></div>
+        <div class="button-row">
+          <button id="copyTransparent" class="secondary">Copy</button>
+        </div>
+      </div>
+
+      <div class="footer-note">For privacy, always use shielded address.</div>
+    </template>
+
+    <template id="tpl-transactions">
+      <section class="screen-header">
+        <button class="back" data-nav="back">←</button>
+        <h1>TRANSACTIONS</h1>
+        <button class="icon-btn" id="txFilter">⚲</button>
+      </section>
+
+      <div class="search-wrap">
+        <input id="txSearch" placeholder="Search" />
+      </div>
+
+      <section id="txListFull" class="tx-list"></section>
+    </template>
+
+    <template id="tpl-settings">
+      <section class="screen-header">
+        <button class="back" data-nav="back">←</button>
+        <h1>SETTINGS</h1>
+        <div></div>
+      </section>
+
+      <div class="menu-list">
+        <button class="menu-item" data-nav="addressBook">Address Book ▸</button>
+        <button class="menu-item" data-nav="advanced">Advanced Settings ▸</button>
+        <button class="menu-item" data-nav="whatsNew">What’s new ▸</button>
+        <button class="menu-item" data-nav="about">About ▸</button>
+        <button class="menu-item" data-nav="feedback">Send Us Feedback ▸</button>
+      </div>
+
+      <div class="version">ZASHI • Version 3.0</div>
+    </template>
+
+    <template id="tpl-more">
+      <div class="sheet-backdrop" id="sheetBackdrop"></div>
+      <section class="bottom-sheet">
+        <div class="sheet-handle"></div>
+        <div class="sheet-item" data-nav="swap">
+          <span class="badge">N</span>
+          Swap ZEC with NEAR Intents ▸
+          <div class="sub">Swap shielded ZEC to supported assets.</div>
+        </div>
+        <div class="sheet-item" data-nav="dex">
+          <span class="badge">Z</span>
+          ZSAs DEX ▸
+          <div class="sub">Swap ZEC and shielded assets.</div>
+        </div>
+        <div class="sheet-item" data-nav="crosspay">
+          <span class="badge">N</span>
+          CrossPay with Near ▸
+          <div class="sub">Send private cross-chain payments.</div>
+        </div>
+        <div class="sheet-item">Buy ZEC with Coinbase ▸</div>
+        <div class="sheet-item">Connect Keystone Device ▸</div>
+        <div class="sheet-foot">
+          Information shared with integrations is subject to their privacy
+          policies.
+        </div>
+      </section>
+    </template>
+
+    <template id="tpl-swap">
+      <section class="screen-header">
+        <button class="back" data-nav="back">←</button>
+        <h1>Swap with Near</h1>
+        <button class="icon-btn">ⓘ</button>
+      </section>
+    
+      <div class="field">
+        <label>From</label>
+        <div class="pill-row">
+          <div class="asset-pill">ZEC</div>
+          <div class="spendable">Spendable: <span id="spendable"></span></div>
+        </div>
+        <input id="swapFrom" type="number" step="0.00000001" />
+        <div class="sub">≈ <span id="swapFromUsd">US$0,00</span></div>
+      </div>
+    
+      <div class="swap-arrow-container">
+        <button class="swap-arrow" id="swapDirection">⇅</button>
+      </div>
+    
+      <div class="field">
+        <label>To</label>
+        <select id="chooseAsset" class="dex-select">
+          <option value="SOL">SOL - Solana</option>
+          <option value="ETH">ETH - Ethereum</option>
+          <option value="NEAR">NEAR - Near Protocol</option>
+          <option value="SUI">SUI - Sui Network</option>
+          <option value="ARB">ARB - Arbitrum</option>
+          <option value="DOGE">DOGE - Dogecoin</option>
+          <option value="XRP">XRP - Ripple</option>
+          <option value="USDC" selected>USDC - USD Coin</option>
+        </select>
+        <div class="big-number" id="swapToAmount">0,00</div>
+        <div class="sub">≈ <span id="swapToUsd">US$0,00</span></div>
+      </div>
+    
+      <div class="field">
+        <label>Address</label>
+        <div class="input-with-icons">
+          <input id="swapAddress" placeholder="Enter address..." />
+          <div class="input-icons">
+            <button>👤</button>
+            <button>▦</button>
+          </div>
+        </div>
+      </div>
+    
+      <div class="row">
+        <div>Slippage tolerance</div>
+        <button id="slipBtn" class="secondary">1% ⚙️</button>
+      </div>
+    
+      <div class="rate">Rate: 1 ZEC = <span id="rate"></span> <span id="rateAsset">USDC</span></div>
+    
+      <button class="primary block" id="getQuote">Get a quote</button>
+    </template>
+
+    <template id="tpl-crosspay">
+      <section class="screen-header">
+        <button class="back" data-nav="back">←</button>
+        <h1>CROSSPAY</h1>
+        <button class="icon-btn">👁</button>
+      </section>
+    
+      <div class="large-balance" data-priv="zec-balance-large">⌁0,000000</div>
+    
+      <div class="field">
+        <label>Send to</label>
+        <select id="xpayAsset" class="dex-select">
+          <option value="SOL">SOL - Solana</option>
+          <option value="ETH">ETH - Ethereum</option>
+          <option value="NEAR">NEAR - Near Protocol</option>
+          <option value="SUI">SUI - Sui Network</option>
+          <option value="ARB">ARB - Arbitrum</option>
+          <option value="DOGE">DOGE - Dogecoin</option>
+          <option value="XRP">XRP - Ripple</option>
+          <option value="USDC" selected>USDC - USD Coin</option>
+        </select>
+        <div class="input-with-icons">
+          <input id="xpayAddress" placeholder="Enter address..." />
+          <div class="input-icons">
+            <button>👤</button>
+            <button>▦</button>
+          </div>
+        </div>
+      </div>
+    
+      <div class="grid-2">
+        <div class="field">
+          <label>You send (ZEC)</label>
+          <input id="xpayZec" type="number" step="0.00000001" readonly />
+        </div>
+        <div class="field">
+          <label>They receive</label>
+          <input id="xpayAmount" type="number" step="0.000001" placeholder="Amount" />
+        </div>
+      </div>
+    
+      <div class="row">
+        <div>Slippage tolerance</div>
+        <button class="secondary">1% ⚙️</button>
+      </div>
+    
+      <button class="primary block" id="xpayReview">Review</button>
+    </template>
+
+    <template id="tpl-asset-detail">
+      <section class="screen-header">
+        <button class="back" data-nav="back">←</button>
+        <h1 id="assetTitle">ASSET</h1>
+        <div></div>
+      </section>
+    
+      <div class="asset-detail-header">
+        <div class="asset-detail-icon" id="assetIcon">💎</div>
+        <div class="asset-detail-name" id="assetName">Asset Name</div>
+        <div class="asset-detail-balance" id="assetBalance">0.000000</div>
+        <div class="asset-detail-usd" id="assetUsd">US$0.00</div>
+      </div>
+    
+      <section class="list-header">
+        <h2>Transaction History</h2>
+      </section>
+      <section id="assetTxList" class="tx-list"></section>
+    </template>
+
+    <template id="tpl-addressbook">
+      <section class="screen-header">
+        <button class="back" data-nav="settings-back">←</button>
+        <h1>ADDRESS BOOK</h1>
+        <div></div>
+      </section>
+      <ul id="abList" class="ab-list"></ul>
+      <div class="footer-pad"></div>
+      <div class="fixed-footer">
+        <button id="addContact" class="primary block">Add New Contact</button>
+      </div>
+    </template>
+
+    <template id="tpl-advanced">
+      <section class="screen-header">
+        <button class="back" data-nav="settings-back">←</button>
+        <h1>ADVANCED SETTINGS</h1>
+        <div></div>
+      </section>
+      <div class="menu-list">
+        <button class="menu-item">Zashi Recovery Phrase ▸</button>
+        <button class="menu-item">Export Private Data ▸</button>
+        <button class="menu-item">Export Tax File ▸</button>
+        <button class="menu-item">Choose a Server ▸</button>
+        <button class="menu-item">Beta: Tor Protection ▸</button>
+        <button class="menu-item">Currency Conversion ▸</button>
+      </div>
+      <div class="danger-wrap">
+        <button id="resetDemo" class="danger block">Reset Zashi</button>
+        <div class="hint">
+          You’ll be asked to confirm on the next screen (demo only).
+        </div>
+      </div>
+    </template>
+
+    <template id="tpl-feedback">
+      <section class="screen-header">
+        <button class="back" data-nav="settings-back">←</button>
+        <h1>SUPPORT</h1>
+        <div></div>
+      </section>
+      <div class="content-pad">
+        <h2>Send Us Feedback</h2>
+        <p>
+          Tell us about any problems you’ve had, or features you want to see in
+          the future.
+        </p>
+        <div class="emoji-row" id="moodRow">
+          <button>😠</button><button>😒</button><button>🙂</button
+          ><button>😁</button><button>😍</button>
+        </div>
+        <div class="field">
+          <label>How can we help you?</label>
+          <textarea id="feedbackText" placeholder="I would like to ask about..."></textarea>
+        </div>
+        <button id="shareFeedback" class="primary block">Share</button>
+      </div>
+    </template>
+
+    <template id="tpl-about">
+      <section class="screen-header">
+        <button class="back" data-nav="settings-back">←</button>
+        <h1>ABOUT</h1>
+        <div></div>
+      </section>
+      <div class="content-pad">
+        <h2>Introducing Zashi</h2>
+        <p>
+          Minimal-design, self-custody, ZEC-only shielded wallet. This is a
+          demo replica for UI exploration only.
+        </p>
+        <div class="menu-list">
+          <button class="menu-item">Privacy Policy ▸</button>
+        </div>
+      </div>
+      <div class="version">ZASHI • Version 3.0</div>
+    </template>
+
+    <template id="tpl-whatsnew">
+      <section class="screen-header">
+        <button class="back" data-nav="settings-back">←</button>
+        <h1>WHAT’S NEW</h1>
+        <div></div>
+      </section>
+      <div class="content-pad">
+        <h2>Zashi Version 3.0</h2>
+        <h3>3.0: ZSAs integration/h3>
+        <ul>
+          <li>Trade ZSAs in Zashi.</li>
+        </ul>
+        <h3>2.2: Swap ZEC with Zashi</h3>
+        <ul>
+        <h2>Zashi Version 2.2.1</h2>
+        <h3>2.2.1: Bug Fix Release</h3>
+        <ul>
+          <li>Fix: wrong “failed” label on some transparent receives.</li>
+        </ul>
+        <h3>2.2: Swap ZEC with Zashi</h3>
+        <ul>
+          <li>Swap shielded ZEC with Near Intents.</li>
+          <li>Zashi is ZEC-only; you’ll need an address for the target asset.</li>
+        </ul>
+      </div>
+      <div class="version">ZASHI • Version 3.0</div>
+    </template>
+
+    <template id="tpl-txdetails">
+      <section class="screen-header">
+        <button class="back" data-nav="back">←</button>
+        <h1 id="txType">DETAILS</h1>
+        <div></div>
+      </section>
+      <div class="large-balance" id="txAmount">0,0000 ZEC</div>
+      <div class="row" style="justify-content:center;gap:8px;color:#999">
+        <span id="txShield">🛡</span>
+      </div>
+      <div class="menu-list" style="margin-top:8px">
+        <div class="menu-item">
+          <div style="color:#a3a0a6;font-size:12px">Sent to</div>
+          <div class="card-mono" id="txTo"></div>
+          <button class="secondary" id="copyTo" style="margin-top:8px">
+            Copy
+          </button>
+        </div>
+        <div class="menu-item">
+          <div style="color:#a3a0a6;font-size:12px">Transaction ID</div>
+          <div class="card-mono" id="txId"></div>
+          <button class="secondary" id="copyId" style="margin-top:8px">
+            Copy
+          </button>
+        </div>
+        <div class="menu-item">
+          <div style="display:flex;justify-content:space-between">
+            <span>Fee</span><b id="txFee">0,0001 ZEC</b>
+          </div>
+        </div>
+        <div class="menu-item">
+          <div style="color:#a3a0a6;font-size:12px">Timestamp</div>
+          <div id="txTime"></div>
+        </div>
+        <div class="menu-item">
+          <div style="color:#a3a0a6;font-size:12px">Message</div>
+          <div id="txMemo" class="card-mono"></div>
+        </div>
+      </div>
+      <div class="row">
+        <button class="secondary" id="addNote">Add a note</button>
+        <button class="primary" id="saveAddr">Save address</button>
+      </div>
+    </template>
+    <template id="tpl-dex">
+      <section class="screen-header">
+        <button class="back" data-nav="back">←</button>
+        <h1>ZSAs DEX</h1>
+        <div></div>
+      </section>
+    
+      <div class="dex-row">
+        <div class="field">
+          <label>From</label>
+          <select id="dexFrom" class="dex-select">
+            <option value="ZEC">ZEC</option>
+            <option value="BTCs">Bitcoin (shielded)</option>
+            <option value="USDCs">USDC (shielded)</option>
+            <option value="ETHs">Ethereum (shielded)</option>
+            <option value="SOLs">Solana (shielded)</option>
+            <option value="ZEPE">Zepe Memecoin</option>
+          </select>
+          <input id="dexFromAmt" type="number" step="0.00000001" />
+          <div class="hint">Balance: <span id="dexFromBal">0</span></div>
+        </div>
+    
+        <div class="swap-arrow-container">
+          <button class="swap-arrow" id="dexSwapDirection">⇅</button>
+        </div>
+    
+        <div class="field">
+          <label>To (Buy)</label>
+          <select id="dexTo" class="dex-select">
+            <option value="BTCs">Bitcoin (shielded)</option>
+            <option value="USDCs">USDC (shielded)</option>
+            <option value="ETHs">Ethereum (shielded)</option>
+            <option value="SOLs">Solana (shielded)</option>
+            <option value="ZEPE">Zepe Memecoin</option>
+            <option value="ZEC">ZEC</option>
+          </select>
+          <input id="dexToAmt" type="number" step="0.00000001" />
+          <div class="hint">Balance: <span id="dexToBal">0</span></div>
+        </div>
+      </div>
+    
+      <div class="rate-note" id="dexRate">Rate: —</div>
+    
+      <button class="primary block" id="dexSwap">Swap</button>
+    </template>
+
+    <script src="https://cdn.jsdelivr.net/npm/qrcode@1.5.1/build/qrcode.min.js"></script>
+    <script src="app.js"></script>
+  </body>
+</html>

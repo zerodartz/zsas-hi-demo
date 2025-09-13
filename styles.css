@@ -248,7 +248,7 @@ label {
   font-weight: 600;
   letter-spacing: 0.2px;
   color: var(--text);
-  opacity: 0.95;
+  opacity: 1;
 }
 
 .secondary .action-name {
@@ -294,7 +294,7 @@ textarea {
 }
 
 .primary:disabled {
-  opacity: 0.5;
+  opacity: 1;
   cursor: not-allowed;
 }
 
@@ -355,7 +355,7 @@ textarea {
 
 .input-icons .icon-btn:active,
 .input-icons button:active {
-  transform: translateY(1px);
+  transform: translateY(2px);
 }
 
 /* Lists and Items */
@@ -540,7 +540,7 @@ textarea {
 }
 
 .asset-detail-header .button-row .secondary:active {
-  transform: translateY(1px);
+  transform: translateY(2px);
 }
 
 /* DEX Components */
@@ -1185,5 +1185,151 @@ textarea {
   .tx-icon {
     width: 34px;
     height: 34px;
+  }
+}
+
+/* View transition layers */
+#viewContainer {
+  position: relative;
+  overflow: hidden; /* hide sliding overflow */
+  min-height: 100vh;
+  background: var(--bg); /* belt-and-suspenders */
+}
+
+/* Each view is an absolute layer */
+.view {
+  position: absolute;
+  inset: 0;
+  z-index: 1;
+  will-change: transform;
+  background: var(--bg);
+}
+/* State classes for slide animations */
+.view.enter {
+  transform: translateX(100%); /* start off-screen right */
+  opacity: 1;
+}
+.view.enter-active {
+  transform: translateX(0);
+  transition: transform 450ms cubic-bezier(0.3, 1, 0.4, 1);
+}
+
+.view.exit {
+  transform: translateX(0);
+  opacity: 1;
+  z-index: 2; /* sit above the underlying screen while sliding out */
+}
+.view.exit-active {
+  transform: translateX(100%); /* slide out to right */
+  transition: transform 400ms cubic-bezier(0.35, 1, 0.25, 1);
+}
+
+/* Shared transition for interactive controls */
+button,
+.primary,
+.secondary,
+.icon-btn,
+.action-tile,
+.swap-arrow,
+.trade-btn,
+.see-all,
+.menu-item,
+.danger {
+  transition: filter 0.14s ease, box-shadow 0.14s ease, transform 0.08s ease;
+}
+
+/* Desktop-only hover: darker + 2px down + drop shadow */
+@media (hover: hover) and (pointer: fine) {
+  button:hover,
+  .primary:hover,
+  .secondary:hover,
+  .icon-btn:hover,
+  .action-tile:hover,
+  .swap-arrow:hover,
+  .trade-btn:hover,
+  .see-all:hover,
+  .menu-item:hover,
+  .danger:hover {
+    filter: brightness(0.9);
+    transform: translateY(2px);
+    box-shadow:
+      0 6px 14px rgba(0, 0, 0, 0.18),
+      0 2px 6px rgba(0, 0, 0, 0.16);
+  }
+
+  /* Active overrides hover shadow while keeping 2px down */
+  button:active:hover,
+  .primary:active:hover,
+  .secondary:active:hover,
+  .icon-btn:active:hover,
+  .action-tile:active:hover,
+  .swap-arrow:active:hover,
+  .trade-btn:active:hover,
+  .see-all:active:hover,
+  .menu-item:active:hover,
+  .danger:active:hover {
+    filter: brightness(0.92);
+    transform: translateY(2px);
+    box-shadow: inset 0 2px 6px rgba(0, 0, 0, 0.35);
+  }
+}
+
+/* Pressed state (touch + desktop): 2px down with inset shadow */
+button:active,
+.primary:active,
+.secondary:active,
+.icon-btn:active,
+.action-tile:active,
+.swap-arrow:active,
+.trade-btn:active,
+.see-all:active,
+.menu-item:active,
+.danger:active {
+  filter: brightness(0.92);
+  box-shadow: inset 0 2px 6px rgba(0, 0, 0, 0.35);
+  transform: translateY(2px);
+}
+
+/* Keep input icon buttons’ stronger press consistent */
+.input-icons .icon-btn:active,
+.input-icons button:active {
+  filter: brightness(0.9);
+  box-shadow: inset 0 2px 6px rgba(0, 0, 0, 0.35);
+  transform: translateY(2px);
+}
+
+/* Disabled immunity */
+button:disabled,
+.primary:disabled,
+.secondary:disabled {
+  filter: none !important;
+  box-shadow: none !important;
+  transform: none !important;
+  cursor: not-allowed;
+}
+
+/* Optional: reduce motion preference */
+@media (prefers-reduced-motion: reduce) {
+  .view.enter,
+  .view.exit,
+  .view.enter-active,
+  .view.exit-active {
+    transition: none !important;
+    transform: none !important;
+  }
+}
+
+@media (hover: none) {
+  button:active,
+  .primary:active,
+  .secondary:active,
+  .icon-btn:active,
+  .action-tile:active,
+  .swap-arrow:active,
+  .trade-btn:active,
+  .see-all:active,
+  .menu-item:active,
+  .danger:active {
+    filter: brightness(0.88);
   }
 }

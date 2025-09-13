@@ -35,7 +35,7 @@ let uiPrefill = {
 
 function renderAssetDetail(assetCode) {
   const v = renderTemplate('tpl-asset-detail');
-  setView(v);
+  setView(v, { mode: __navMode });
   attachCommon();
 
   const assetIcons = {
@@ -237,28 +237,102 @@ function showToast(msg) {
 }
 
 /* ----------  router  ---------- */
+let __navMode = 'forward'; // 'forward' | 'back'
+
 function nav(name) {
   if (!routes[name]) return;
+  __navMode = 'forward';
   historyStack.push(name);
   routes[name]();
 }
+
 function historyBack() {
+  // Go back to dashboard as you did
   historyStack = ['dashboard'];
+  __navMode = 'back';
   renderDashboard();
 }
-function setView(el) {
+
+function setView(contentFragment, opts = {}) {
+  // opts: { mode: 'forward' | 'back', onDone }
+  const mode = opts.mode || 'forward';
+
   const container = $('#viewContainer');
-  container.innerHTML = '';
-  container.appendChild(el);
-  // Do not bind any buttons here; attachCommon will handle all data-navs
+
+  // Current view layer (if any) stays in place underneath
+  const current = container.querySelector('.view');
+
+  // Create new view layer with incoming content
+  const next = document.createElement('div');
+  next.className = 'view';
+  next.appendChild(contentFragment);
+
+  // Prepare animation classes
+  if (mode === 'forward') {
+    // New view slides in from right over existing view
+    next.classList.add('enter');
+    container.appendChild(next);
+
+    // Force layout then transition
+    requestAnimationFrame(() => {
+      next.classList.add('enter-active');
+      next.addEventListener(
+        'transitionend',
+        () => {
+          // Clean classes
+          next.classList.remove('enter', 'enter-active');
+          // Remove the old view underneath
+          if (current && current !== next) {
+            current.remove();
+          }
+          opts.onDone && opts.onDone();
+        },
+        { once: true }
+      );
+    });
+  } else if (mode === 'back') {
+    // Back: the already-present underlying screen should be visible.
+    // Strategy:
+    // 1) Insert the next view UNDER the current one (so it's already there).
+    // 2) Animate current view sliding out to right.
+    if (current) {
+      // Insert next below current
+      container.insertBefore(next, current);
+    } else {
+      container.appendChild(next);
+    }
+
+    // No animation for 'next' (it's already there)
+    // Animate current out faster
+    if (current) {
+      current.classList.add('exit');
+      // Force layout then transition to exit-active
+      requestAnimationFrame(() => {
+        current.classList.add('exit-active');
+        current.addEventListener(
+          'transitionend',
+          () => {
+            current.remove();
+            next.classList.remove('enter', 'enter-active', 'exit', 'exit-active');
+            opts.onDone && opts.onDone();
+          },
+          { once: true }
+        );
+      });
+    } else {
+      // No current to animate; just show next
+      opts.onDone && opts.onDone();
+    }
+  } else {
+    // Fallback: no animation
+    container.innerHTML = '';
+    container.appendChild(next);
+    opts.onDone && opts.onDone();
+  }
 }
+
 function renderTemplate(id) {
-  return document.importNode($(`#${id}`).content, true);
-}
-function setPrivText(selector, text) {
-  $$(selector).forEach((el) => {
-    el.textContent = privacy ? '•••••' : text;
-  });
+  return document.importNode(document.querySelector(`#${id}`).content, true);
 }
 
 function setPrivacyMode(isPrivate) {
@@ -341,11 +415,32 @@ function renderDashboard() {
 
   // ... rest of your existing renderDashboard below ...
 
-  const grid = v.querySelector('#assetGrid');
-  if (grid) {
+  function repaintPortfolio(root) {
+    // header total
+    const header = root.querySelector('section.list-header');
+    if (header) {
+      const old = header.querySelector('.portfolio-total-inline');
+      if (old) old.remove();
+      const totalEl = document.createElement('div');
+      totalEl.className = 'portfolio-total-inline';
+      totalEl.textContent = privacy
+        ? 'Total: •••••'
+        : `Total: ${formatFiat(totalPortfolioUsd)}`;
+      const h2 = header.querySelector('h2');
+      const tradeBtn = header.querySelector('.trade-btn');
+      if (h2 && tradeBtn) header.insertBefore(totalEl, tradeBtn);
+      else header.appendChild(totalEl);
+    }
+
+    // grid
+    const grid = root.querySelector('#assetGrid');
+    if (!grid) return;
+
     grid.style.display = 'grid';
     grid.style.gridTemplateColumns = '1fr';
     grid.innerHTML = '';
+
+    const visible = state.portfolioExpanded ? entries : entries.slice(0, 2);
 
     const assetIcons = {
       BTCs: '₿',
@@ -367,10 +462,8 @@ function renderDashboard() {
       USDCs: 'USDC (shielded)',
       ETHs: 'Ethereum (shielded)',
       SOLs: 'Solana (shielded)',
-      ZEPE: 'Zepe Memecoin',
+      ZEPE: 'Zepe Meme',
     };
-
-    const visible = state.portfolioExpanded ? entries : entries.slice(0, 2);
 
     // If you still want the total inside the grid as well, keep your existing code.
     // Otherwise, you can remove the previous "portfolio-total" header you were injecting
@@ -391,8 +484,8 @@ function renderDashboard() {
           </div>
           <div style="display:flex;align-items:center;gap:8px;">
             <div class="asset-amt" data-priv="asset-${a}">${
-  privacy ? '•••••' : formatAsset(amt, a, 'dashboard')
-}</div>
+        privacy ? '•••••' : formatAsset(amt, a, 'dashboard')
+      }</div>
             <div class="asset-arrow">›</div>
           </div>
         </div>`;
@@ -406,19 +499,31 @@ function renderDashboard() {
         state.portfolioExpanded ? 'Less ↑' : 'Expand ↓'
       }</button>`;
       grid.appendChild(toggleWrap);
-      $('#pfToggle', grid).onclick = () => {
+      const btn = grid.querySelector('#pfToggle');
+      btn.onclick = () => {
         state.portfolioExpanded = !state.portfolioExpanded;
         saveState();
-        renderDashboard();
+        // Repaint in place, no route transition
+        repaintPortfolio(document);
       };
     }
   }
 
-  const list = v.querySelector('#txList');
-  list.append(...state.txs.slice(0, 4).map(renderTxItem));
-
-  setView(v);
+  // Initial paint
+  setView(v, { mode: __navMode });
   attachCommon();
+
+// Paint tx preview directly into live DOM so it stays when we repaint portfolio
+const txListEl = document.querySelector('#txList');
+if (txListEl) {
+  txListEl.innerHTML = '';
+  txListEl.append(
+    ...state.txs.slice(0, 4).map(renderTxItem) // or 5 if you prefer
+  );
+}
+
+// Now repaint only the portfolio parts in place (no slide)
+repaintPortfolio(document);
 
   const z = Number.isFinite(+state.zecBalance) ? +state.zecBalance : 0;
   setPrivText('[data-priv="zec-balance"]', `ᙇ${z.toFixed(3)}`);
@@ -513,7 +618,7 @@ function renderTransactions() {
   const v = renderTemplate('tpl-transactions');
   const list = v.querySelector('#txListFull');
   state.txs.forEach((t) => list.appendChild(renderTxItem(t)));
-  setView(v);
+  setView(v, { mode: __navMode });
   attachCommon();
   $('#txSearch').oninput = (e) => {
     const q = e.target.value.toLowerCase();
@@ -531,7 +636,7 @@ function renderTransactions() {
 
 function renderSend() {
   const v = renderTemplate('tpl-send');
-  setView(v);
+  setView(v, { mode: __navMode });
   attachCommon();
 
   setPrivText(
@@ -629,7 +734,7 @@ function renderSend() {
 
 function renderReceive() {
   const v = renderTemplate('tpl-receive');
-  setView(v);
+  setView(v, { mode: __navMode });
   attachCommon();
   $('#taddr').textContent = state.taddr;
   $('#copyShielded').onclick = () => {
@@ -863,7 +968,7 @@ function showPaymentRequestResult(uri, shareableLink, asset, amount, memo, label
 
 function renderSettings() {
   const v = renderTemplate('tpl-settings');
-  setView(v);
+  setView(v, { mode: __navMode });
   attachCommon();
 }
 
@@ -909,7 +1014,7 @@ function showMoreSheet() {
 
 function renderSwap() {
   const v = renderTemplate('tpl-swap');
-  setView(v);
+  setView(v, { mode: __navMode });
   attachCommon();
   $('#spendable').textContent = state.zecBalance.toFixed(8);
   
@@ -989,7 +1094,7 @@ function renderSwap() {
 
 function renderCrossPay() {
   const v = renderTemplate('tpl-crosspay');
-  setView(v);
+  setView(v, { mode: __navMode });
   attachCommon();
   setPrivText('[data-priv="zec-balance-large"]', `ᙇ${state.zecBalance.toFixed(6)}`);
   
@@ -1077,7 +1182,7 @@ function renderAddressBook() {
     });
   }
   paint();
-  setView(v);
+  setView(v, { mode: __navMode });
   attachCommon();
   $('#addContact').onclick = () => {
     openConfirm(
@@ -1097,7 +1202,7 @@ function renderAddressBook() {
 
 function renderAdvanced() {
   const v = renderTemplate('tpl-advanced');
-  setView(v);
+  setView(v, { mode: __navMode });
   attachCommon();
   $('#resetDemo').onclick = () => {
     openConfirm(
@@ -1119,7 +1224,7 @@ function renderAdvanced() {
 
 function renderFeedback() {
   const v = renderTemplate('tpl-feedback');
-  setView(v);
+  setView(v, { mode: __navMode });
   attachCommon();
   let mood = '🙂';
   $('#moodRow').onclick = (e) => {
@@ -1138,13 +1243,13 @@ function renderFeedback() {
 
 function renderAbout() {
   const v = renderTemplate('tpl-about');
-  setView(v);
+  setView(v, { mode: __navMode });
   attachCommon();
 }
 
 function renderWhatsNew() {
   const v = renderTemplate('tpl-whatsnew');
-  setView(v);
+  setView(v, { mode: __navMode });
   attachCommon();
 }
 
@@ -1181,7 +1286,7 @@ function renderTxDetails() {
   const memoEl = v.querySelector('#txMemo');
   if (memoEl) memoEl.textContent = d.memo;
 
-  setView(v);
+  setView(v, { mode: __navMode });
   attachCommon();
 
   // Make Save address secondary
@@ -1242,7 +1347,7 @@ function renderTxDetails() {
 
 function renderDex() {
   const v = renderTemplate('tpl-dex');
-  setView(v);
+  setView(v, { mode: __navMode });
   attachCommon();
 
   const fromSel = $('#dexFrom');

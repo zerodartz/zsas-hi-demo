@@ -29,7 +29,8 @@ body {
   height: 100%;
   background: var(--bg);
   color: var(--text);
-  font-family: Inter, system-ui, -apple-system, Segoe UI, Roboto, Arial, sans-serif;
+  font-family: Inter, system-ui, -apple-system, Segoe UI, Roboto, Arial,
+    sans-serif;
 }
 
 #app {
@@ -1026,6 +1027,7 @@ textarea {
   display: grid;
   place-items: center;
   padding: 10px 8px;
+  z-index: 2000; /* above bottom-sheet (1000) and sheet-overlay (999) */
 }
 
 #modalBackdrop.hidden {
@@ -1155,45 +1157,47 @@ textarea {
   .action-icon {
     font-size: 26px;
   }
-  
+
   .input-with-icons input {
     padding-right: 86px;
     height: 44px;
     line-height: 44px;
   }
-  
+
   .input-icons .icon-btn,
   .input-icons button {
     width: 34px;
     height: 34px;
     border-radius: 9px;
   }
-  
+
   .brand-name {
     max-width: 50vw;
   }
-  
+
   #topbar .icon-btn {
     font-size: 20px;
     padding: 6px 8px;
   }
-  
+
   .asset-amt {
     font-size: 15px;
   }
-  
+
   .tx-icon {
     width: 34px;
     height: 34px;
   }
 }
 
-/* View transition layers */
+/* ========================= */
+/* View transition layers    */
+/* ========================= */
 #viewContainer {
   position: relative;
   overflow: hidden; /* hide sliding overflow */
   min-height: 100vh;
-  background: var(--bg); /* belt-and-suspenders */
+  background: var(--bg); /* ensures top layer is opaque while sliding */
 }
 
 /* Each view is an absolute layer */
@@ -1203,11 +1207,13 @@ textarea {
   z-index: 1;
   will-change: transform;
   background: var(--bg);
+  backface-visibility: hidden;
+  -webkit-backface-visibility: hidden;
 }
+
 /* State classes for slide animations */
 .view.enter {
   transform: translateX(100%); /* start off-screen right */
-  opacity: 1;
 }
 .view.enter-active {
   transform: translateX(0);
@@ -1216,13 +1222,16 @@ textarea {
 
 .view.exit {
   transform: translateX(0);
-  opacity: 1;
   z-index: 2; /* sit above the underlying screen while sliding out */
 }
 .view.exit-active {
   transform: translateX(100%); /* slide out to right */
   transition: transform 400ms cubic-bezier(0.35, 1, 0.25, 1);
 }
+
+/* ========================= */
+/* Button hover/pressed UX   */
+/* ========================= */
 
 /* Shared transition for interactive controls */
 button,
@@ -1292,6 +1301,7 @@ button:active,
 
 /* Keep input icon buttons’ stronger press consistent */
 .input-icons .icon-btn:active,
+.input-icons .button:active,
 .input-icons button:active {
   filter: brightness(0.9);
   box-shadow: inset 0 2px 6px rgba(0, 0, 0, 0.35);
@@ -1308,7 +1318,9 @@ button:disabled,
   cursor: not-allowed;
 }
 
-/* Optional: reduce motion preference */
+/* ========================= */
+/* Motion accessibility      */
+/* ========================= */
 @media (prefers-reduced-motion: reduce) {
   .view.enter,
   .view.exit,
@@ -1319,6 +1331,7 @@ button:disabled,
   }
 }
 
+/* Stronger feedback for active on touch-only devices (optional) */
 @media (hover: none) {
   button:active,
   .primary:active,

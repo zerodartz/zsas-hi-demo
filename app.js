@@ -10,7 +10,7 @@ const routes = {
   receive: renderReceive,
   transactions: renderTransactions,
   settings: renderSettings,
-  more: renderMore,
+  more: showMoreSheet,
   swap: renderSwap,
   crosspay: renderCrossPay,
   addressBook: renderAddressBook,
@@ -27,40 +27,105 @@ const routes = {
   'asset-ZEPE': () => renderAssetDetail('ZEPE'),
 };
 
+// one-shot UI preferences passed between screens
+let uiPrefill = {
+  sendAsset: null,    // e.g., 'USDCs'
+  requestAsset: null, // e.g., 'ETHs'
+};
+
 function renderAssetDetail(assetCode) {
   const v = renderTemplate('tpl-asset-detail');
   setView(v);
   attachCommon();
-  
+
   const assetIcons = {
-    BTCs: '₿', USDCs: '💵', ETHs: '🔷', SOLs: '☀️', ZEPE: '🐸'
+    BTCs: '₿',
+    USDCs: '💵',
+    ETHs: '🔷',
+    SOLs: '☀️',
+    ZEPE: '🐸',
   };
-  
+
   const nameMap = {
     BTCs: 'Bitcoin (shielded)',
-    USDCs: 'USDC (shielded)', 
+    USDCs: 'USDC (shielded)',
     ETHs: 'Ethereum (shielded)',
     SOLs: 'Solana (shielded)',
-    ZEPE: 'Zepe Memecoin'
+    ZEPE: 'Zepe Memecoin',
   };
+
   const balance = state.assets[assetCode] || 0;
   const usdValue = toUsd(assetCode, balance);
-  
+
   $('#assetTitle').textContent = assetCode;
   $('#assetIcon').textContent = assetIcons[assetCode] || '💎';
   $('#assetName').textContent = nameMap[assetCode] || assetCode;
-  $('#assetBalance').textContent = balance.toFixed(6);
+
+  // 3 decimals in asset detail
+  $('#assetBalance').textContent = formatAsset(balance, assetCode, 'asset-detail');
   $('#assetUsd').textContent = formatFiat(usdValue);
-  
-  // Filter transactions for this asset
-  const assetTxs = state.txs.filter(tx => tx.asset === assetCode);
+
+  // Ensure actions exist (template has #assetActions)
+  const actionsHost = $('#assetActions') || v.querySelector('.asset-detail-actions');
+  if (actionsHost && !actionsHost.childElementCount) {
+    actionsHost.innerHTML = `
+      <div class="button-row">
+        <button class="secondary" id="assetSendBtn">
+        <div class="action-icon">↑</div>
+          <div class="action-name">Send</div>
+          </button>
+        <button class="secondary" id="assetReceiveBtn">
+        <div class="action-icon">↓</div>
+          <div class="action-name">Receive</div>
+          </button>
+        <button class="secondary" id="assetSwapBtn">
+         <div class="action-icon">⇅</div>
+          <div class="action-name">Swap</div>
+          </button>
+      </div>
+    `;
+  }
+
+  const header = v.querySelector('.asset-detail-header') || document;
+  const sendBtn = $('#assetSendBtn', header);
+  const recvBtn = $('#assetReceiveBtn', header);
+  const swapBtn = $('#assetSwapBtn', header);
+
+  if (sendBtn) {
+    sendBtn.onclick = () => {
+      uiPrefill.sendAsset = assetCode; // prefill send asset
+      nav('send');
+    };
+  }
+  if (recvBtn) {
+    recvBtn.onclick = () => {
+      uiPrefill.requestAsset = assetCode; // prefill request asset
+      nav('receive');
+      setTimeout(() => {
+        // auto-open request modal with asset preselected
+        const reqBtn = document.querySelector('#reqShielded');
+        if (reqBtn) reqBtn.click();
+      }, 0);
+    };
+  }
+  if (swapBtn) {
+    swapBtn.onclick = () => {
+      state.dexPref = { to: assetCode };
+      saveState();
+      nav('dex');
+    };
+  }
+
+  // Render tx list for this asset
+  const assetTxs = state.txs.filter((tx) => tx.asset === assetCode);
   const list = $('#assetTxList');
   list.innerHTML = '';
-  
+
   if (assetTxs.length === 0) {
-    list.innerHTML = '<div style="text-align:center;color:var(--muted);padding:40px;">No transactions yet</div>';
+    list.innerHTML =
+      '<div style="text-align:center;color:var(--muted);padding:40px;">No transactions yet</div>';
   } else {
-    assetTxs.forEach(tx => list.appendChild(renderTxItem(tx)));
+    assetTxs.forEach((tx) => list.appendChild(renderTxItem(tx)));
   }
 }
 
@@ -117,7 +182,7 @@ function loadState() {
     taddr: s.taddr ?? 't1hgasdpghjiaiop6Abcdefghij123',
     zaddr: s.zaddr ?? randomShielded(),
     pendingTimer: s.pendingTimer ?? null,
-    assets: s.assets ?? { BTCs: 0.1, USDCs: 0.1, ETHs: 0.1, SOLs: 0.1, ZEPE: 0.1 },
+    assets: s.assets ?? { BTCs: 0.005, USDCs: 420, ETHs: 0.1, SOLs: 8, ZEPE: 42069 },
     portfolioExpanded: s.portfolioExpanded ?? false,
   };
 }
@@ -258,10 +323,10 @@ function renderDashboard() {
       : `Total: ${formatFiat(totalPortfolioUsd)}`;
 
     // Optional: style it subtle and center-flex it
-    totalEl.style.marginLeft = '18px';
+    totalEl.style.marginLeft = '12px';
     totalEl.style.marginRight = 'auto';
     totalEl.style.color = 'var(--muted)';
-    totalEl.style.fontSize = '16px';
+    totalEl.style.fontSize = '14px';
 
     // Insert between <h2> and the button
     const h2 = header.querySelector('h2');
@@ -305,7 +370,7 @@ function renderDashboard() {
       ZEPE: 'Zepe Memecoin',
     };
 
-    const visible = state.portfolioExpanded ? entries : entries.slice(0, 3);
+    const visible = state.portfolioExpanded ? entries : entries.slice(0, 2);
 
     // If you still want the total inside the grid as well, keep your existing code.
     // Otherwise, you can remove the previous "portfolio-total" header you were injecting
@@ -326,8 +391,8 @@ function renderDashboard() {
           </div>
           <div style="display:flex;align-items:center;gap:8px;">
             <div class="asset-amt" data-priv="asset-${a}">${
-              privacy ? '•••••' : amt.toFixed(6)
-            }</div>
+  privacy ? '•••••' : formatAsset(amt, a, 'dashboard')
+}</div>
             <div class="asset-arrow">›</div>
           </div>
         </div>`;
@@ -337,9 +402,8 @@ function renderDashboard() {
 
     if (entries.length > 3) {
       const toggleWrap = document.createElement('div');
-      toggleWrap.style.padding = '0 0 8px 0';
       toggleWrap.innerHTML = `<button class="secondary" id="pfToggle">${
-        state.portfolioExpanded ? '↑' : '↓'
+        state.portfolioExpanded ? 'Less ↑' : 'Expand ↓'
       }</button>`;
       grid.appendChild(toggleWrap);
       $('#pfToggle', grid).onclick = () => {
@@ -380,13 +444,26 @@ function renderDashboard() {
   });
 }
 
-function formatAmount(n, asset) {
+function formatAsset(amount, asset, where) {
+  // where: 'dashboard' | 'asset-detail' | 'tx-list' | 'tx-detail'
+  // Decimals policy: dashboard=3, asset-detail=3, tx-* = 5
+  let decimals = 2;
+  if (where === 'dashboard') decimals = 3;
+  else if (where === 'asset-detail') decimals = 3;
+  else if (where === 'tx-list' || where === 'tx-detail') decimals = 5;
+
+  return (+amount).toLocaleString('en-US', {
+    minimumFractionDigits: decimals,
+    maximumFractionDigits: decimals,
+  });
+}
+
+// Update formatAmount to use the policy helper.
+// Keep returning "<amount> <ASSET>" without the sign.
+function formatAmount(n, asset, where = 'tx-list') {
   const abs = Math.abs(n);
-  const dec = asset === 'ZEC' ? (abs < 1 ? 8 : 4) : 6;
-  return `${abs.toLocaleString('en-US', {
-    minimumFractionDigits: dec,
-    maximumFractionDigits: dec,
-  })} ${asset}`;
+  const txt = formatAsset(abs, asset, where);
+  return `${txt} ${asset}`;
 }
 
 function renderTxItem(t) {
@@ -397,7 +474,7 @@ function renderTxItem(t) {
   const symbol = t.asset || 'ZEC';
   const sign = t.amount >= 0 ? '+' : '-';
   const icon = t.kind === 'recv' ? '↓' : '↑';
-  const amountText = `${sign} ${formatAmount(Math.abs(t.amount), symbol)}`;
+  const amountText = `${sign} ${formatAmount(Math.abs(t.amount), symbol, 'tx-list')}`;
 
   el.innerHTML = `
     <div class="tx-icon">${icon}</div>
@@ -456,29 +533,87 @@ function renderSend() {
   const v = renderTemplate('tpl-send');
   setView(v);
   attachCommon();
-  setPrivText('[data-priv="zec-balance-large"]', `ᙇ${state.zecBalance.toFixed(6)}`);
+
+  setPrivText(
+    '[data-priv="zec-balance-large"]',
+    `ᙇ${state.zecBalance.toFixed(6)}`
+  );
+
+  const assetSel = $('#sendAsset');
+  const ticker = $('#sendAssetTicker');
   const zecInput = $('#amountZec');
   const usdInput = $('#amountUsd');
-  zecInput.oninput = () => {
-    const z = +zecInput.value || 0;
-    usdInput.value = (z * state.usdRate).toFixed(2);
-  };
+
+  // Prefill from asset detail
+  if (uiPrefill.sendAsset) {
+    assetSel.value = uiPrefill.sendAsset;
+    ticker.textContent = uiPrefill.sendAsset;
+    uiPrefill.sendAsset = null; // one-shot
+  } else {
+    ticker.textContent = assetSel.value;
+  }
+
+  function recalc() {
+    const a = assetSel.value;
+    ticker.textContent = a;
+    const price = PRICES[a] ? PRICES[a]() : 1;
+    const amt = +zecInput.value || 0;
+    usdInput.value = (amt * price).toFixed(2);
+  }
+
+  zecInput.oninput = recalc;
+  assetSel.onchange = recalc;
+
   usdInput.oninput = () => {
+    const a = assetSel.value;
+    const price = PRICES[a] ? PRICES[a]() : 1;
     const u = +usdInput.value || 0;
-    zecInput.value = (u / state.usdRate).toFixed(8);
+    zecInput.value = (price ? u / price : 0).toFixed(8);
   };
+
   $('#reviewSend').onclick = () => {
     const addr = $('#sendAddress').value.trim();
-    const z = +zecInput.value;
-    if (!addr || z <= 0) return showToast('Enter address and amount');
+    const asset = assetSel.value;
+    const amt = +zecInput.value;
+    const p = PRICES[asset] ? PRICES[asset]() : 1;
+    if (!addr || amt <= 0) return showToast('Enter address and amount');
+
+    const fiat = amt * p;
     openConfirm(
       'CONFIRMATION',
-      `<div style="text-align:center"><div style="font-size:44px;font-weight:800;letter-spacing:1px;margin:4px 0;">${formatZec(z).replace('-', '')}</div><div style="color:#a3a0a6;margin-bottom:10px;">${formatFiat(z * state.usdRate)}</div></div><div class="menu-list"><div class="menu-item"><div style="color:#a3a0a6;font-size:12px">Sending to</div><div class="card-mono">${addr}</div></div><div class="menu-item" style="display:flex;justify-content:space-between"><span>Fee</span><b>0,0001 ZEC</b></div></div>`,
+      `<div style="text-align:center">
+         <div style="font-size:44px;font-weight:800;letter-spacing:1px;margin:4px 0;">
+           ${formatAsset(amt, asset, 'tx-detail')} ${asset}
+         </div>
+         <div style="color:#a3a0a6;margin-bottom:10px;">${formatFiat(fiat)}</div>
+       </div>
+       <div class="menu-list">
+         <div class="menu-item">
+           <div class="tx-label">Sending to</div>
+           <div class="card-mono">${addr}</div>
+         </div>
+         <div class="menu-item" style="display:flex;justify-content:space-between">
+           <span>Fee</span><b>0,0001 ${asset === 'ZEC' ? 'ZEC' : 'ZEC'}</b>
+         </div>
+       </div>`,
       () => {
+        // Mock: only ZEC balance is tracked; ZSA sends just add tx
         showSendingScreen(addr);
         setTimeout(() => {
-          state.txs.unshift({ id: Math.random().toString(36).slice(2), kind: 'sent', amount: -z, time: new Date().toISOString(), shielded: true, status: 'confirmed' });
-          state.zecBalance = +(state.zecBalance - z).toFixed(8);
+          state.txs.unshift({
+            id: Math.random().toString(36).slice(2),
+            kind: 'sent',
+            amount: -amt,
+            asset,
+            time: new Date().toISOString(),
+            shielded: true,
+            status: 'confirmed',
+          });
+          if (asset === 'ZEC') {
+            state.zecBalance = +(state.zecBalance - amt).toFixed(8);
+          } else {
+            state.assets[asset] = +((state.assets[asset] || 0) - amt).toFixed(8);
+          }
           saveState();
           renderDashboard();
           showToast('Sent (mock)');
@@ -487,6 +622,7 @@ function renderSend() {
       'Send'
     );
   };
+
   $('#pickContact').onclick = () => nav('addressBook');
   $('#scanQr').onclick = () => showToast('QR scanner not available in demo');
 }
@@ -554,12 +690,12 @@ function openPaymentRequestModal() {
       </div>
       <div class="field">
         <label>Message/Memo (optional)</label>
-        <textarea id="requestMemo" maxlength="512" placeholder="Payment description or memo..."></textarea>
+        <textarea id="requestMemo" maxlength="512" placeholder="Shielded memo..."></textarea>
         <div class="hint">Max 512 characters</div>
       </div>
       <div class="field">
         <label>Request Label (optional)</label>
-        <input id="requestLabel" type="text" placeholder="e.g., Invoice #123, Coffee payment..." />
+        <input id="requestLabel" type="text" placeholder="Coffee payment..." />
       </div>
     </div>`,
     () => {
@@ -567,11 +703,19 @@ function openPaymentRequestModal() {
       const amount = $('#requestAmount').value.trim();
       const memo = $('#requestMemo').value.trim();
       const label = $('#requestLabel').value.trim();
-      
       generatePaymentRequest(asset, amount, memo, label);
     },
     'Generate Request'
   );
+
+  // preselect requested asset if set
+  setTimeout(() => {
+    const sel = document.querySelector('#requestAsset');
+    if (sel && uiPrefill.requestAsset) {
+      sel.value = uiPrefill.requestAsset;
+      uiPrefill.requestAsset = null; // one-shot
+    }
+  }, 0);
 }
 
 function generatePaymentRequest(asset, amount, memo, label) {
@@ -723,16 +867,44 @@ function renderSettings() {
   attachCommon();
 }
 
-function renderMore() {
-  const v = renderTemplate('tpl-more');
-  setView(v);
-  attachCommon();
+function showMoreSheet() {
+  // Build from template
+  const frag = renderTemplate('tpl-more');
+  // Create a container for the overlay so we can remove it easily
+  const overlay = document.createElement('div');
+  overlay.className = 'sheet-overlay';
+  // Move nodes from fragment to overlay
+  overlay.appendChild(frag);
 
-  const root = $('#viewContainer');
-  const backdrop = $('#sheetBackdrop', root);
-  if (backdrop) {
-    backdrop.onclick = () => historyBack();
-  }
+  // Ensure proper stacking
+  const sheet = overlay.querySelector('.bottom-sheet');
+  const backdrop = overlay.querySelector('#sheetBackdrop');
+
+  // Append over current view; do NOT replace view
+  document.body.appendChild(overlay);
+
+  // Animate in (optional)
+  requestAnimationFrame(() => {
+    sheet.style.transform = 'translateX(-50%) translateY(0)';
+  });
+
+  // Close helpers
+  const closeSheet = () => {
+    if (!overlay.parentNode) return;
+    overlay.parentNode.removeChild(overlay);
+  };
+
+  // Backdrop closes sheet
+  if (backdrop) backdrop.onclick = closeSheet;
+
+  // Wire sheet items: close sheet first, then navigate
+  overlay.querySelectorAll('[data-nav]').forEach((el) => {
+    el.onclick = () => {
+      const target = el.getAttribute('data-nav');
+      closeSheet();
+      if (routes[target]) nav(target);
+    };
+  });
 }
 
 function renderSwap() {
@@ -986,25 +1158,86 @@ function renderTxDetails() {
   const sym = d.t.asset || 'ZEC';
   const usdV = toUsd(sym, Math.abs(d.t.amount));
   v.querySelector('#txAmount').innerHTML = `
-    <span style="font-size:inherit">${formatAmount(d.t.amount, sym)}</span>
+    <span style="font-size:inherit">${formatAmount(d.t.amount, sym, 'tx-detail')}</span>
     <div style="color:var(--muted);font-size:14px;margin-top:4px">≈ ${formatFiat(usdV)}</div>
   `;
 
-  v.querySelector('#txShield').style.opacity = d.t.shielded ? 1 : 0.2;
-  v.querySelector('#txTo').textContent = d.toAddr;
+  const shieldEl = v.querySelector('#txShield');
+  if (shieldEl) shieldEl.style.opacity = d.t.shielded ? 1 : 0.2;
+
+  const toEl = v.querySelector('#txTo');
+  if (toEl) toEl.textContent = d.toAddr;
+
   const shortId = d.txid.slice(0, 6) + '…' + d.txid.slice(-4);
-  v.querySelector('#txId').textContent = shortId;
-  v.querySelector('#txFee').textContent = `${feeToStr(d.fee)} ZEC`;
-  v.querySelector('#txTime').textContent = new Date(d.t.time).toLocaleString();
-  v.querySelector('#txMemo').textContent = d.memo;
+  const idEl = v.querySelector('#txId');
+  if (idEl) idEl.textContent = shortId;
+
+  const feeEl = v.querySelector('#txFee');
+  if (feeEl) feeEl.textContent = `${feeToStr(d.fee)} ZEC`;
+
+  const timeEl = v.querySelector('#txTime');
+  if (timeEl) timeEl.textContent = new Date(d.t.time).toLocaleString();
+
+  const memoEl = v.querySelector('#txMemo');
+  if (memoEl) memoEl.textContent = d.memo;
 
   setView(v);
   attachCommon();
 
-  v.querySelector('#copyTo').onclick = () => (navigator.clipboard.writeText(d.toAddr), showToast('Address copied'));
-  v.querySelector('#copyId').onclick = () => (navigator.clipboard.writeText(d.txid), showToast('Tx ID copied'));
-  v.querySelector('#addNote').onclick = () => showToast('Note added (mock)');
-  v.querySelector('#saveAddr').onclick = () => showToast('Address saved (mock)');
+  // Make Save address secondary
+  const saveBtn = v.querySelector('#saveAddr');
+  if (saveBtn) {
+    saveBtn.classList.remove('primary');
+    saveBtn.classList.add('secondary');
+  }
+
+  // Inline copy buttons (robust)
+  const wrapInlineCopy = (valueSel, btnSel) => {
+    const valueEl = v.querySelector(valueSel);
+    const btn = v.querySelector(btnSel);
+    if (!valueEl || !btn) return;
+    const parent = valueEl.parentElement;
+    if (!parent) return;
+    if (!parent.classList.contains('info-row')) {
+      parent.classList.add('info-row');
+    }
+    valueEl.classList.add('with-copy', 'card-mono');
+    btn.classList.add('copy-inline');
+    // Ensure we append only once
+    if (!btn.parentElement || btn.parentElement !== parent) {
+      parent.appendChild(btn);
+    }
+  };
+
+  wrapInlineCopy('#txTo', '#copyTo');
+  wrapInlineCopy('#txId', '#copyId');
+
+  // Handlers (guard each)
+  const copyToBtn = v.querySelector('#copyTo');
+  if (copyToBtn) {
+    copyToBtn.onclick = () => {
+      navigator.clipboard.writeText(d.toAddr);
+      showToast('Address copied');
+    };
+  }
+
+  const copyIdBtn = v.querySelector('#copyId');
+  if (copyIdBtn) {
+    copyIdBtn.onclick = () => {
+      navigator.clipboard.writeText(d.txid);
+      showToast('Tx ID copied');
+    };
+  }
+
+  const addNoteBtn = v.querySelector('#addNote');
+  if (addNoteBtn) {
+    addNoteBtn.onclick = () => showToast('Note added (mock)');
+  }
+
+  const saveAddrBtn = v.querySelector('#saveAddr');
+  if (saveAddrBtn) {
+    saveAddrBtn.onclick = () => showToast('Address saved (mock)');
+  }
 }
 
 function renderDex() {
@@ -1132,13 +1365,22 @@ function renderDex() {
         setTimeout(() => {
           showToast(`Swapped ${f.toFixed(6)} ${fa} → ${out.toFixed(6)} ${ta}`);
           renderDashboard();
-        }, 3000);
+        }, 2600);
       },
       'Swap'
     );
   };
-  updateBalances();
-  refreshQuote();
+  // Preselect target if we came from asset detail
+if (state.dexPref?.to) {
+  toSel.value = state.dexPref.to;
+}
+if (state.dexPref?.from) {
+  fromSel.value = state.dexPref.from;
+}
+updateBalances();
+refreshQuote();
+state.dexPref = null;
+saveState();
 }
 
 /* ----------  common  ---------- */

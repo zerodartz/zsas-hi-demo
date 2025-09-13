@@ -64,32 +64,32 @@
 
       <section class="action-row">
         <button class="action-tile" data-nav="receive">
-          ⤵
-          <span>Receive</span>
+          <div class="action-icon">↓</div>
+          <div class="action-name">Receive</div>
         </button>
         <button class="action-tile" data-nav="send">
-          ⤴
-          <span>Send</span>
+          <div class="action-icon">↑</div>
+          <div class="action-name">Send</div>
         </button>
         <button class="action-tile" data-nav="pay">
-          ➜
-          <span>Pay</span>
+          <div class="action-icon">→</div>
+          <div class="action-name">Pay</div>
         </button>
         <button class="action-tile" data-nav="more">
-          ⋯
-          <span>More</span>
+          <div class="action-icon">⋯</div>
+          <div class="action-name">More</div>
         </button>
       </section>
 
       <section class="list-header">
         <h2>Portfolio</h2>
-        <button class="trade-btn" data-nav="dex">Trade ▸</button>
+        <button class="trade-btn" data-nav="dex">Swap ▸</button>
       </section>
       <section class="asset-grid" id="assetGrid"></section>
       
       <section class="list-header">
         <h2>Transactions</h2>
-        <button class="see-all" data-nav="transactions">See all ▸</button>
+        <button class="see-all" data-nav="transactions">See more ▸</button>
       </section>
       <section id="txList" class="tx-list"></section>
     </template>
@@ -100,23 +100,35 @@
         <h1>SEND</h1>
         <button class="icon-btn">👁</button>
       </section>
-
+    
       <div class="large-balance" data-priv="zec-balance-large">⌁0,000000</div>
-
+    
+      <div class="field">
+        <label>Asset</label>
+        <select id="sendAsset" class="dex-select">
+          <option value="ZEC">ZEC - Zcash</option>
+          <option value="BTCs">Bitcoin (shielded)</option>
+          <option value="USDCs">USDC (shielded)</option>
+          <option value="ETHs">Ethereum (shielded)</option>
+          <option value="SOLs">Solana (shielded)</option>
+          <option value="ZEPE">Zepe Memecoin</option>
+        </select>
+      </div>
+    
       <div class="field">
         <label>Send to</label>
         <div class="input-with-icons">
-          <input id="sendAddress" placeholder="Zcash Address" />
+          <input id="sendAddress" placeholder="Zcash / ZSA Address" />
           <div class="input-icons">
             <button id="pickContact">👤</button>
             <button id="scanQr">▦</button>
           </div>
         </div>
       </div>
-
+    
       <div class="grid-2">
         <div class="field">
-          <label>Amount (ZEC)</label>
+          <label>Amount (<span id="sendAssetTicker">ZEC</span>)</label>
           <input id="amountZec" type="number" step="0.00000001" />
         </div>
         <div class="field">
@@ -124,26 +136,26 @@
           <input id="amountUsd" type="number" step="0.01" />
         </div>
       </div>
-
+    
       <div class="field">
         <label>Message</label>
         <textarea id="sendMemo" maxlength="512" placeholder="Encrypted memo"></textarea>
         <div class="hint">512/512</div>
       </div>
-
+    
       <button class="primary block" id="reviewSend">Review</button>
     </template>
 
     <template id="tpl-receive">
       <section class="screen-header">
         <button class="back" data-nav="back">←</button>
-        <h1>RECEIVE ZEC</h1>
+        <h1>RECEIVE Shielded Assets</h1>
         <div></div>
       </section>
 
       <div class="card purple">
         <div class="card-title">Zcash Shielded Address</div>
-        <div class="card-sub">Rotates every time you use it</div>
+        <div class="card-sub">Rotates every time you use it. Can receive all shielded assets.</div>
         <div class="button-row">
           <button id="copyShielded" class="secondary">Copy</button>
           <button id="qrShielded" class="secondary">QR Code</button>
@@ -153,6 +165,7 @@
 
       <div class="card">
         <div class="card-title">Zcash Transparent Address</div>
+        <div class="card-sub">Public address, can only receive transparent ZEC.</div>
         <div class="card-mono" id="taddr"></div>
         <div class="button-row">
           <button id="copyTransparent" class="secondary">Copy</button>
@@ -198,23 +211,21 @@
       <div class="sheet-backdrop" id="sheetBackdrop"></div>
       <section class="bottom-sheet">
         <div class="sheet-handle"></div>
-        <div class="sheet-item" data-nav="swap">
-          <span class="badge">N</span>
-          Swap ZEC with NEAR Intents ▸
-          <div class="sub">Swap shielded ZEC to supported assets.</div>
-        </div>
         <div class="sheet-item" data-nav="dex">
           <span class="badge">Z</span>
           ZSAs DEX ▸
           <div class="sub">Swap ZEC and shielded assets.</div>
+        </div>
+        <div class="sheet-item" data-nav="swap">
+          <span class="badge">N</span>
+          Swap ZEC with NEAR Intents ▸
+          <div class="sub">Swap shielded ZEC to supported assets.</div>
         </div>
         <div class="sheet-item" data-nav="crosspay">
           <span class="badge">N</span>
           CrossPay with Near ▸
           <div class="sub">Send private cross-chain payments.</div>
         </div>
-        <div class="sheet-item">Buy ZEC with Coinbase ▸</div>
-        <div class="sheet-item">Connect Keystone Device ▸</div>
         <div class="sheet-foot">
           Information shared with integrations is subject to their privacy
           policies.
@@ -337,12 +348,17 @@
       </section>
     
       <div class="asset-detail-header">
-        <div class="asset-detail-icon" id="assetIcon">💎</div>
-        <div class="asset-detail-name" id="assetName">Asset Name</div>
+        <div class="asset-detail-top">
+          <div class="asset-detail-icon" id="assetIcon">💎</div>
+          <div class="asset-detail-name" id="assetName">Asset Name</div>
+        </div>
+      
         <div class="asset-detail-balance" id="assetBalance">0.000000</div>
         <div class="asset-detail-usd" id="assetUsd">US$0.00</div>
+      
+        <div class="asset-detail-actions" id="assetActions"></div>
       </div>
-    
+
       <section class="list-header">
         <h2>Transaction History</h2>
       </section>
@@ -435,21 +451,13 @@
       </section>
       <div class="content-pad">
         <h2>Zashi Version 3.0</h2>
-        <h3>3.0: ZSAs integration/h3>
+        <p>3.0: ZSAs integration</p>
         <ul>
           <li>Trade ZSAs in Zashi.</li>
         </ul>
         <h3>2.2: Swap ZEC with Zashi</h3>
         <ul>
-        <h2>Zashi Version 2.2.1</h2>
-        <h3>2.2.1: Bug Fix Release</h3>
-        <ul>
-          <li>Fix: wrong “failed” label on some transparent receives.</li>
-        </ul>
-        <h3>2.2: Swap ZEC with Zashi</h3>
-        <ul>
           <li>Swap shielded ZEC with Near Intents.</li>
-          <li>Zashi is ZEC-only; you’ll need an address for the target asset.</li>
         </ul>
       </div>
       <div class="version">ZASHI • Version 3.0</div>
@@ -461,44 +469,55 @@
         <h1 id="txType">DETAILS</h1>
         <div></div>
       </section>
+    
       <div class="large-balance" id="txAmount">0,0000 ZEC</div>
+    
       <div class="row" style="justify-content:center;gap:8px;color:#999">
         <span id="txShield">🛡</span>
       </div>
+    
       <div class="menu-list" style="margin-top:8px">
+        <!-- Sent to -->
         <div class="menu-item">
-          <div style="color:#a3a0a6;font-size:12px">Sent to</div>
-          <div class="card-mono" id="txTo"></div>
-          <button class="secondary" id="copyTo" style="margin-top:8px">
-            Copy
-          </button>
+          <div class="kv">
+            <div class="kv-head">Sent to</div>
+            <button class="secondary kv-copy" id="copyTo">Copy</button>
+            <div class="card-mono kv-body" id="txTo"></div>
+          </div>
         </div>
+    
+        <!-- Transaction ID -->
         <div class="menu-item">
-          <div style="color:#a3a0a6;font-size:12px">Transaction ID</div>
-          <div class="card-mono" id="txId"></div>
-          <button class="secondary" id="copyId" style="margin-top:8px">
-            Copy
-          </button>
+          <div class="kv">
+            <div class="kv-head">Transaction ID</div>
+            <button class="secondary kv-copy" id="copyId">Copy</button>
+            <div class="card-mono kv-body" id="txId"></div>
+          </div>
         </div>
+    
         <div class="menu-item">
           <div style="display:flex;justify-content:space-between">
             <span>Fee</span><b id="txFee">0,0001 ZEC</b>
           </div>
         </div>
+    
         <div class="menu-item">
           <div style="color:#a3a0a6;font-size:12px">Timestamp</div>
           <div id="txTime"></div>
         </div>
+    
         <div class="menu-item">
           <div style="color:#a3a0a6;font-size:12px">Message</div>
           <div id="txMemo" class="card-mono"></div>
         </div>
       </div>
+    
       <div class="row">
         <button class="secondary" id="addNote">Add a note</button>
         <button class="primary" id="saveAddr">Save address</button>
       </div>
     </template>
+
     <template id="tpl-dex">
       <section class="screen-header">
         <button class="back" data-nav="back">←</button>

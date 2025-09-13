@@ -40,6 +40,14 @@ h2 {
   margin: 4px;
 }
 
+.input-icons.button {
+  font-size: 18px;
+  font-weight: 400;
+  border-radius: 12px;
+  margin: 4px;
+  background-color: hsl(0, 0%, 10%);
+}
+
 .topbar {
   display: flex;
   align-items: center;
@@ -222,7 +230,7 @@ h2 {
   font-size: 28px;
   font-weight: 800;
   padding: 0 16px 8px 16px;
-  text-align: ;
+  text-align: center;
 }
 
 .field {
@@ -230,6 +238,7 @@ h2 {
   display: flex;
   flex-direction: column;
   gap: 8px;
+  margin-right: 8px;
 }
 
 label {
@@ -276,7 +285,9 @@ textarea {
 
 .grid-2 {
   display: grid;
-  grid-template-columns: 1fr 1fr;
+  grid-template-columns: 1fr;
+  grid-template-rows: 1fr auto;
+  max-width: 100%;
   gap: 12px;
   padding: 8px 16px;
 }
@@ -285,22 +296,77 @@ textarea {
   color: var(--muted);
   font-size: 14px;
 }
-
+/* Address field with right-side action icons (contacts + QR) */
 .input-with-icons {
   position: relative;
 }
 
 .input-with-icons input {
   width: 100%;
-  padding-right: 82px;
+  padding-right: 96px; /* leave room for two icons + gap */
+  height: 46px; /* match your input/button height */
+  line-height: 46px;
 }
 
+/* Container for the icons aligned to the input's right edge */
 .input-icons {
   position: absolute;
+  top: 58%;
   right: 8px;
-  top: 6px;
+  transform: translateY(-50%);
   display: flex;
-  gap: 6px;
+  gap: 8px;
+}
+
+/* Icon buttons: no white background, match theme */
+.input-icons .icon-btn,
+.input-icons button {
+  background: var(--elev-2);        /* subtle dark */
+  border: 1px solid var(--border);
+  color: var(--text);
+  width: 36px;
+  height: 36px;
+  min-width: 36px;
+  min-height: 36px;
+  border-radius: 10px;
+  display: grid;
+  place-items: center;
+  padding: 0;
+  line-height: 1;
+  cursor: pointer;
+  transition: background 0.15s ease, transform 0.05s ease;
+}
+
+.input-icons .icon-btn:hover,
+.input-icons button:hover {
+  background: var(--elev);
+}
+
+.input-icons .icon-btn:active,
+.input-icons button:active {
+  transform: translateY(1px);
+}
+
+/* If you use emoji/icons, reduce font size a bit to center visually */
+.input-icons .icon-btn,
+.input-icons button span,
+.input-icons button i {
+  font-size: 18px;
+}
+
+/* Compact variant for small screens */
+@media (max-width: 390px) {
+  .input-with-icons input {
+    padding-right: 86px;
+    height: 44px;
+    line-height: 44px;
+  }
+  .input-icons .icon-btn,
+  .input-icons button {
+    width: 34px;
+    height: 34px;
+    border-radius: 9px;
+  }
 }
 
 .separator {
@@ -342,12 +408,12 @@ textarea {
 
 .asset-name {
   color: var(--muted);
-  font-size: 12px;
+  font-size: 14px;
 }
 
 .asset-amt {
   font-weight: 700;
-  margin: 4px 4px 4px 4px;
+  margin: 4px 4px 4px 4px; 
 }
 
 /* ZSAs DEX */
@@ -613,6 +679,20 @@ select.dex-select {
   background: #5a5aff;
 }
 
+.fiat-row button {
+  background-color: hsl(0, 0%, 10%);
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  padding: 6px 12px 8px 12pxa;
+  margin: 8px;
+  width: 32px;
+  height: 32px;
+  font-size: 20px;
+  font-weight: 400;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
 /* Add to your CSS */
 .qr-modal {
   text-align: center;
@@ -973,4 +1053,370 @@ select.dex-select {
   padding: 10px;
   background: var(--elev);
   border-radius: 8px;
+}
+
+/* ========== iPhone polish / responsive ========== */
+
+/* Respect iOS safe areas */
+:root {
+  --safe-top: env(safe-area-inset-top, 0px);
+  --safe-bottom: env(safe-area-inset-bottom, 0px);
+  --safe-left: env(safe-area-inset-left, 0px);
+  --safe-right: env(safe-area-inset-right, 0px);
+}
+
+#app {
+  padding-left: var(--safe-left);
+  padding-right: var(--safe-right);
+}
+
+/* Top bar: reduce height, prevent overflow of icon buttons */
+.topbar {
+  padding: calc(10px + var(--safe-top)) 12px 10px 12px;
+  gap: 8px;
+}
+
+.brand-name {
+  font-size: 20px;
+  line-height: 1.1;
+  max-width: 60vw; /* prevent pushing icons off-screen */
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+#topbar .icon-btn,
+.top-actions .icon-btn {
+  font-size: 22px;
+  padding: 8px 10px;
+  border-radius: 10px;
+  line-height: 1;
+}
+
+/* Screen header (back + title) */
+.screen-header {
+  grid-template-columns: 44px 1fr 44px;
+  padding: 8px 10px;
+  column-gap: 6px;
+}
+
+.back {
+  font-size: 20px;
+  padding: 8px;
+}
+
+/* Big numbers/titles scale down on small widths */
+.balance {
+  font-size: clamp(34px, 9vw, 52px);
+}
+
+.large-balance {
+  font-size: clamp(22px, 6.2vw, 28px);
+}
+
+h2 {
+  font-size: clamp(18px, 6vw, 24px);
+  margin: 4px 6px;
+}
+
+/* Fiat row centered without awkward margins */
+.fiat-row {
+  justify-content: center;
+  margin-left: 0;
+  margin-right: 0;
+  font-size: 14px;
+}
+
+/* Action grid gets larger tap targets and spacing on small screens */
+.action-row {
+  grid-template-columns: repeat(4, 1fr);
+  gap: 10px;
+  padding: 10px 12px;
+}
+
+#text .action-tile {
+  font-size: 28px;
+  font-weight: 400;
+}
+
+.action-tile {
+  padding: 14px 8px;
+  border-radius: 16px;
+  font-size: 14px;
+  font-weight: 400;
+}
+
+/* List header: keep things on one line without crowding */
+.list-header {
+  padding: 8px 12px;
+  gap: 8px;
+}
+
+.trade-btn,
+.see-all {
+  padding: 6px 10px;
+  font-size: 14px;
+}
+
+/* Portfolio grid: more compact on phones */
+.asset-grid {
+  grid-template-columns: 1fr 1fr;
+  gap: 6px;
+  padding: 8px 12px 14px;
+}
+
+.asset-card {
+  padding: 8px 10px;
+  border-radius: 14px;
+}
+
+.asset-icon {
+  font-size: 18px;
+}
+
+.asset-amt {
+  font-size: 16px;
+}
+
+/* Transaction list */
+.tx-list {
+  padding: 0 4px 8px;
+}
+
+.tx-item {
+  padding: 8px 6px;
+  margin: 6px 4px;
+  gap: 6px;
+}
+
+.tx-icon {
+  width: 38px;
+  height: 38px;
+}
+
+.tx-title {
+  font-size: 14px;
+}
+
+.tx-sub {
+  font-size: 12px;
+}
+
+/* Forms and inputs tighter */
+.field {
+  padding: 8px 12px;
+  gap: 6px;
+  flex: auto 0 0;
+}
+
+label {
+  font-size: 15px;
+}
+
+input,
+textarea,
+button.secondary,
+select.dex-select,
+.asset-pill {
+  padding: 10px 12px;
+  font-size: 16px;
+  border-radius: 10px;
+  flex: auto 0 0;
+}
+
+textarea {
+  min-height: 90px;
+}
+
+/* DEX layout tweaks */
+.dex-row {
+  flex-direction: grid;
+  grid-template-columns: 1fr;
+  grid-template-rows: 1fr auto 1fr;
+  max-width: 100%;
+  padding: 8px 12px;
+  gap: 8px;
+  font-size: 16px;
+}
+
+.swap-arrow {
+  width: 44px;
+  height: 44px;
+  font-size: 18px;
+  ma
+}
+
+/* Cards and mono blocks inside Tx details should not overflow */
+.card {
+  margin: 10px 12px;
+  padding: 12px;
+  border-radius: 12px;
+}
+
+.card-mono {
+  font-size: 12px;
+  overflow-wrap: anywhere; /* break long strings */
+  white-space: normal;
+}
+
+/* Buttons row */
+.button-row {
+  gap: 8px;
+}
+
+.primary,
+.block {
+  font-size: 16px;
+}
+
+.block {
+  width: calc(100% - 24px);
+  margin: 12px 12px 18px 12px;
+  border-radius: 14px;
+}
+
+/* Bottom sticky area respects safe area */
+.fixed-footer {
+  padding-bottom: calc(12px + var(--safe-bottom));
+}
+
+/* Bottom sheet respects safe area */
+.bottom-sheet {
+  max-width: 480px;
+  padding-bottom: calc(14px + var(--safe-bottom));
+}
+
+/* Toast lift above home indicator */
+#toast {
+  bottom: calc(16px + var(--safe-bottom));
+}
+
+/* Modal: fit within phone, scroll content, keep actions visible */
+#modalBackdrop {
+  padding: 10px 8px;
+}
+
+#modal {
+  width: min(95%, 380px);
+  max-height: calc(92vh - var(--safe-top) - var(--safe-bottom));
+  margin-top: var(--safe-top);
+  margin-bottom: var(--safe-bottom);
+  display: grid;
+  grid-template-rows: auto 1fr auto; /* title, body (scroll), actions */
+  padding: 16px;
+}
+
+#modalTitle {
+  font-size: 18px;
+  margin-bottom: 8px;
+}
+
+#modalBody {
+  overflow: auto;
+  padding-right: 2px; /* avoid overlay scrollbars overlapping content */
+}
+
+.modal-actions {
+  position: sticky;
+  bottom: 0;
+  background: linear-gradient(180deg, transparent, var(--elev) 40%);
+  padding-top: 8px;
+  margin-top: 8px;
+  gap: 8px;
+}
+
+.modal-actions button {
+  padding: 12px 14px;
+  font-size: 15px;
+  border-radius: 12px;
+}
+
+/* QR sections compact and centered */
+.qr-modal {
+  padding: 8px 8px 0;
+}
+
+.qr-container {
+  padding: 8px;
+  margin: 6px 0;
+  border-radius: 10px;
+}
+
+.request-header {
+  padding: 10px;
+  border-radius: 10px;
+}
+
+.request-icon {
+  font-size: 32px;
+}
+
+.request-title {
+  font-size: 16px;
+}
+
+.request-amount {
+  font-size: 18px;
+}
+
+.action-section {
+  margin-bottom: 10px;
+  padding: 10px;
+  border-radius: 10px;
+}
+
+.header-icons .icon-btn,
+.section-header .icon-btn {
+  font-size: 18px;
+  padding: 6px 8px;
+}
+
+/* Copyable URIs and links scroll if long */
+.share-link,
+.payment-uri {
+  font-size: 12px;
+  max-height: 80px;
+  overflow: auto;
+}
+
+/* Transaction amount header sizing */
+.big-number,
+#txAmount {
+  font-size: clamp(22px, 7vw, 40px);
+}
+
+/* Ensure long “Sent to” / addresses wrap safely inside cards */
+.menu-item .card-mono,
+.qr-address {
+  overflow-wrap: anywhere;
+  word-break: break-word;
+}
+
+/* Prevent layout shift from iOS toolbar showing/hiding */
+html,
+body {
+  height: 100%;
+}
+
+/* ========== very small devices (≤ 360px width) ========== */
+@media (max-width: 360px) {
+  .brand-name {
+    max-width: 50vw;
+  }
+  #topbar .icon-btn {
+    font-size: 20px;
+    padding: 6px 8px;
+  }
+  .trade-btn,
+  .see-all {
+    font-size: 13px;
+    padding: 6px 8px;
+  }
+  .asset-amt {
+    font-size: 15px;
+  }
+  .tx-icon {
+    width: 34px;
+    height: 34px;
+  }
 }

@@ -36,7 +36,7 @@ body {
 #app {
   max-width: 480px;
   margin: 0 auto;
-  min-height: 100vh;
+  min-height: 120vh;
   padding-left: var(--safe-left);
   padding-right: var(--safe-right);
 }
@@ -1058,7 +1058,7 @@ textarea {
 #modalBody {
   overflow: auto;
   padding-right: 2px;
-  max-height: 70vh;
+  max-height: 75vh;
 }
 
 .modal-actions {
@@ -1195,20 +1195,20 @@ textarea {
 /* ========================= */
 #viewContainer {
   position: relative;
-  overflow: hidden; /* hide sliding overflow */
-  min-height: 100vh;
-  background: var(--bg); /* ensures top layer is opaque while sliding */
+  overflow: hidden; /* hides moving edges */
+  background: var(--bg);
+  min-height: 120vh;
+  /* no fixed heights here */
 }
 
-/* Each view is an absolute layer */
 .view {
   position: absolute;
   inset: 0;
   z-index: 1;
-  will-change: transform;
   background: var(--bg);
-  backface-visibility: hidden;
-  -webkit-backface-visibility: hidden;
+  will-change: transform;
+  overflow: auto;            /* This line enables internal scrolling */
+  -webkit-overflow-scrolling: touch; /* smooth scroll on iOS */
 }
 
 /* State classes for slide animations */

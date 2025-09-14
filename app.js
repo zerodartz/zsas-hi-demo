@@ -205,11 +205,39 @@ function ensureModalClosed() {
 }
 
 // setView with animations that do not interfere with feature flows
+function rafN(n, cb) {
+  if (n <= 0) return cb();
+  requestAnimationFrame(() => rafN(n - 1, cb));
+}
+
+function animateAfterStable(next, start, quietMs = 500, maxWaitMs = 1000) {
+  let timer = null;
+  let started = false;
+  const finish = () => {
+    if (started) return;
+    started = true;
+    obs.disconnect();
+    start();
+  };
+  const obs = new MutationObserver(() => {
+    clearTimeout(timer);
+    timer = setTimeout(finish, quietMs);
+  });
+  obs.observe(next, { childList: true, subtree: true });
+  // Fallback cap
+  setTimeout(finish, maxWaitMs);
+}
+
+let __isAnimating = false;
+
 function setView(contentFragment, opts = {}) {
   ensureModalClosed();
   const mode = opts.mode || __navMode || 'forward';
   const container = $('#viewContainer');
   const current = container.querySelector('.view');
+
+  // Prevent interruption during animation
+  if (__isAnimating && mode === 'forward') { return; }
 
   // Build next layer wrapper
   const next = document.createElement('div');
@@ -220,13 +248,15 @@ function setView(contentFragment, opts = {}) {
   if (!current || mode === 'none') {
     container.innerHTML = '';
     container.appendChild(next);
-    __navMode = 'forward'; // reset for future
+    __navMode = 'forward';
+    __isAnimating = false;
     opts.onDone && opts.onDone();
     return;
   }
 
+  __isAnimating = true;
+
   if (mode === 'forward') {
-    // New view slides in from right over existing view
     next.classList.add('enter');
     container.appendChild(next);
     requestAnimationFrame(() => {
@@ -237,34 +267,31 @@ function setView(contentFragment, opts = {}) {
           next.classList.remove('enter', 'enter-active');
           if (current && current.parentNode) current.remove();
           __navMode = 'forward';
+          __isAnimating = false;
           opts.onDone && opts.onDone();
         },
         { once: true }
       );
     });
-  } else if (mode === 'back') {
-    // Insert new under current; slide current out to the right
-    container.insertBefore(next, current);
-    current.classList.add('exit');
-    requestAnimationFrame(() => {
-      current.classList.add('exit-active');
-      current.addEventListener(
-        'transitionend',
-        () => {
-          if (current && current.parentNode) current.remove();
-          __navMode = 'forward';
-          opts.onDone && opts.onDone();
-        },
-        { once: true }
-      );
-    });
-  } else {
-    // Fallback: instant
-    container.innerHTML = '';
-    container.appendChild(next);
-    __navMode = 'forward';
-    opts.onDone && opts.onDone();
-  }
+    
+    } else if (mode === 'back') {
+      container.insertBefore(next, current);
+      if (opts.initNext) { try { opts.initNext(next); } catch (e) {} }
+      void next.offsetHeight;
+    
+      animateAfterStable(next, () => {
+        current.classList.add('exit');
+        requestAnimationFrame(() => {
+          current.classList.add('exit-active');
+          current.addEventListener('transitionend', () => {
+            if (current && current.parentNode) current.remove();
+            __navMode = 'forward';
+            __isAnimating = false;
+            opts.onDone && opts.onDone();
+          }, { once: true });
+        });
+      }, 350, 800);
+    }
 }
 
 function renderTemplate(id) {
@@ -449,7 +476,27 @@ function renderDashboard() {
   }
 
   // Mount screen with animation per nav mode
-  setView(v, { mode: __navMode });
+  setView(v, {
+    mode: __navMode,
+    onDone: () => {
+      // for forward/none, or after back completes
+      completeRenderDashboard(entries, totalPortfolioUsd, repaintPortfolio);
+    },
+  });
+  // IMPORTANT: if back, we want the underneath view to be ready now
+  if (__navMode === 'back') {
+    // We just inserted the fragment v as "next".
+    // Populate the live DOM now so it's visible during the slide.
+    completeRenderDashboard(entries, totalPortfolioUsd, repaintPortfolio);
+  }
+
+  // If no animation, do the work immediately
+  if (__navMode === 'none') {
+    completeRenderDashboard(entries, totalPortfolioUsd, repaintPortfolio);
+  }
+}
+
+function completeRenderDashboard(entries, totalPortfolioUsd, repaintPortfolio) {
   attachCommon();
 
   // Paint tx preview directly into live DOM
@@ -1250,7 +1297,6 @@ function renderFeedback() {
   $('#shareFeedback').onclick = () => {
     const txt = $('#feedbackText').value.trim();
     showToast('Thanks for the feedback!');
-    console.log('Feedback (mock):', mood, txt);
     nav('dashboard');
   };
 }
